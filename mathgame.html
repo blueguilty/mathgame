@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Manga: 因式分解大作戰 Ver.2</title>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&family=Bangers&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary: #ff4757;
+            --secondary: #2ed573;
+            --accent: #ffa502;
+            --dark: #2f3542;
+            --paper: #f1f2f6;
+            --comic-border: 3px solid var(--dark);
+            --shadow: 6px 6px 0px var(--dark);
+        }
+
+        body {
+            font-family: 'Bangers', 'Noto Sans TC', cursive;
+            background-color: var(--paper);
+            background-image: radial-gradient(#ced6e0 2px, transparent 2px);
+            background-size: 25px 25px;
+            margin: 0;
+            padding: 0;
+            color: var(--dark);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .game-container {
+            width: 95%;
+            max-width: 900px;
+            background: white;
+            border: var(--comic-border);
+            box-shadow: var(--shadow);
+            position: relative;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            min-height: 650px;
+        }
+
+        h1, h2 {
+            text-transform: uppercase;
+            text-align: center;
+            margin: 10px 0;
+            transform: rotate(-1deg);
+        }
+        h1 { font-size: 2.5rem; color: var(--primary); text-shadow: 3px 3px 0px var(--dark); }
+        h2 { font-size: 1.8rem; color: var(--accent); }
+
+        .panel { display: none; flex: 1; flex-direction: column; justify-content: center; align-items: center; animation: popIn 0.3s; }
+        .panel.active { display: flex; }
+
+        .btn {
+            background: var(--accent);
+            border: var(--comic-border);
+            color: white;
+            padding: 12px 24px;
+            font-size: 1.4rem;
+            cursor: pointer;
+            margin: 8px;
+            font-family: inherit;
+            box-shadow: 4px 4px 0px var(--dark);
+            transition: 0.1s;
+            position: relative;
+            overflow: hidden;
+        }
+        .btn:active { transform: translate(4px, 4px); box-shadow: none; }
+        .btn-primary { background: var(--primary); }
+        .btn-secondary { background: var(--secondary); }
+        .btn-option { 
+            background: white; 
+            color: var(--dark); 
+            width: 100%; 
+            text-align: left;
+            font-size: 1.3rem;
+            padding: 15px;
+        }
+        .btn-option:hover { background: #f1f2f6; transform: translate(-2px, -2px); box-shadow: 6px 6px 0 rgba(0,0,0,0.1); }
+
+        input[type="text"] {
+            border: var(--comic-border);
+            padding: 15px;
+            font-size: 1.5rem;
+            width: 70%;
+            text-align: center;
+            outline: none;
+            font-family: inherit;
+            margin-bottom: 20px;
+        }
+
+        /* HUD */
+        .hud {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            background: var(--dark);
+            color: white;
+            padding: 10px;
+            box-sizing: border-box;
+            border: 2px solid var(--dark);
+            margin-bottom: 20px;
+            font-size: 1.2rem;
+        }
+        .combo-badge {
+            background: var(--accent);
+            color: var(--dark);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            margin-left: 5px;
+        }
+
+        .question-box {
+            background: #fff;
+            border: var(--comic-border);
+            padding: 40px 20px;
+            width: 100%;
+            margin-bottom: 20px;
+            position: relative;
+            min-height: 140px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            box-sizing: border-box;
+        }
+        
+        /* 漫畫對話氣泡尖角 */
+        .question-box:after {
+            content: ''; position: absolute; bottom: -20px; left: 50%;
+            border: 20px solid transparent; border-top-color: var(--dark);
+            margin-left: -20px;
+        }
+        .question-box:before {
+            content: ''; position: absolute; bottom: -14px; left: 50%; z-index: 1;
+            border: 20px solid transparent; border-top-color: white;
+            margin-left: -20px;
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            width: 100%;
+        }
+
+        /* 解析視窗 (Modal) */
+        .modal-overlay {
+            display: none;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 999;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background: white;
+            border: var(--comic-border);
+            padding: 30px;
+            max-width: 600px;
+            width: 90%;
+            box-shadow: 0 0 20px var(--primary);
+            animation: popIn 0.3s;
+            position: relative;
+        }
+        .modal-title {
+            background: var(--primary); color: white;
+            display: inline-block; padding: 5px 15px;
+            transform: rotate(-2deg) translate(-40px, -40px);
+            border: var(--comic-border); font-size: 1.5rem;
+        }
+        .step-box {
+            background: #f8f9fa;
+            border-left: 5px solid var(--accent);
+            padding: 15px;
+            margin: 10px 0;
+            font-family: 'Noto Sans TC', sans-serif;
+            line-height: 1.6;
+            font-size: 1.1rem;
+        }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 2px solid var(--dark); padding: 8px; text-align: center; }
+        th { background: var(--accent); color: white; }
+
+        @keyframes popIn { from { opacity:0; transform:scale(0.8); } to { opacity:1; transform:scale(1); } }
+
+        @media(max-width: 650px) {
+            .options-grid { grid-template-columns: 1fr; }
+            h1 { font-size: 1.8rem; }
+            .hud { flex-direction: column; gap: 5px; font-size: 1rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="game-container">
+    
+    <div id="screen-login" class="panel active">
+        <h1>Math Manga<br>因式分解 Ver.2</h1>
+        <p>輸入你的勇者代號，挑戰最高榮譽！</p>
+        <input type="text" id="username" placeholder="例：數學小神童" maxlength="10">
+        <div style="display: flex; flex-wrap: wrap; justify-content: center;">
+            <button class="btn btn-primary" onclick="startGame()">開始挑戰</button>
+            <button class="btn" onclick="showLeaderboard()">英雄榜</button>
+        </div>
+    </div>
+
+    <div id="screen-stage-intro" class="panel">
+        <h2 id="stage-title">第一階段</h2>
+        <p id="stage-desc" style="font-size: 1.2rem; text-align: center; max-width: 80%;">說明文字</p>
+        <div style="font-size: 4rem; font-weight: 900; color: var(--primary);" id="countdown-intro">3</div>
+    </div>
+
+    <div id="screen-game" class="panel">
+        <div class="hud">
+            <div>⏱ 時間: <span id="timer">10:00</span></div>
+            <div>🏆 分數: <span id="score">0</span></div>
+            <div>🔥 連擊: <span id="streak">0</span> <span id="difficulty-badge" class="combo-badge">LV.1</span></div>
+        </div>
+        
+        <div class="question-box">
+            <span id="math-problem">loading...</span>
+        </div>
+        
+        <div class="options-grid" id="options-container"></div>
+    </div>
+
+    <div id="screen-result" class="panel">
+        <h1>挑戰結束!</h1>
+        <h2>最終得分: <span id="final-score">0</span></h2>
+        <p id="result-msg">做得好！</p>
+        <button class="btn btn-primary" onclick="saveAndExit()">查看排名</button>
+    </div>
+
+    <div id="screen-leaderboard" class="panel">
+        <h1>英雄榜</h1>
+        <div style="width: 100%; overflow-y: auto; max-height: 300px;">
+            <table id="leaderboard-table">
+                <thead><tr><th>名次</th><th>勇者</th><th>分數</th><th>日期</th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        <button class="btn" onclick="location.reload()">返回首頁</button>
+    </div>
+
+    <div id="modal-explanation" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-title">錯誤解析！</div>
+            <h3>正確答案是：<span id="modal-correct-ans" style="color:var(--secondary)"></span></h3>
+            <div class="step-box" id="modal-steps">
+                </div>
+            <button class="btn btn-primary" style="width:100%" onclick="closeExplanation()">我懂了，下一題！</button>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    // --- 遊戲核心資料 ---
+    const GameState = {
+        user: '',
+        score: 0,
+        stage: 1,
+        timeLeft: 600,
+        timerInterval: null,
+        isPaused: false,
+        streak: 0,
+        difficulty: 1, // 1: Normal, 2: Hard, 3: Expert
+        currentData: null // 儲存當前題目資料(含詳解)
+    };
+
+    // --- 數學引擎 (含詳解與難度調整) ---
+    const MathEngine = {
+        rand: (min, max) => Math.floor(Math.random() * (max - min + 1)) + min,
+        randSign: () => Math.random() < 0.5 ? 1 : -1,
+
+        // 取得難度係數
+        getMultiplier: () => {
+             // 難度越高，係數範圍越大
+             if (GameState.difficulty === 1) return 1;
+             if (GameState.difficulty === 2) return 1.5;
+             return 2.5; 
+        },
+
+        // Stage 1: 提公因式
+        generateStage1: () => {
+            const level = GameState.difficulty;
+            const maxCoeff = Math.floor(9 * MathEngine.getMultiplier());
+            
+            // 隨機生成
+            const a = MathEngine.rand(2, maxCoeff);
+            const b = MathEngine.rand(1, maxCoeff);
+            const k = MathEngine.rand(2, level === 1 ? 5 : 9); // 公因數
+            
+            let q, ans, distractors = [], steps = "";
+
+            // 50% 機率 數字公因式 vs 變數公因式
+            if (Math.random() < 0.5) {
+                // 類型: ka*x + kb
+                let term1 = k * a;
+                let term2 = k * b;
+                let op = MathEngine.randSign() > 0 ? '+' : '-';
+                
+                q = `$$ ${term1}x ${op} ${term2} $$`;
+                ans = `$$ ${k}(${a}x ${op} ${b}) $$`;
+                
+                steps = `1. 觀察係數 ${term1} 和 ${term2}。<br>
+                         2. 找出最大公因數 (GCF) 為 <b>${k}</b>。<br>
+                         3. 將 ${k} 提出來：${term1} ÷ ${k} = ${a}，${term2} ÷ ${k} = ${b}。<br>
+                         4. 答案為 ${k}(${a}x ${op} ${b})。`;
+
+                distractors.push(`$$ ${k}(${a}x ${op==='+'?'-':'+'} ${b}) $$`);
+                distractors.push(`$$ ${Math.floor(k/2)}(${term1}x ${op} ${term2}) $$`); 
+                distractors.push(`$$ ${k}x(${a} ${op} ${b}) $$`);
+            } else {
+                // 類型: kx^2 + kax (提變數)
+                let c = MathEngine.rand(1, 3 + level);
+                let op = MathEngine.randSign() > 0 ? '+' : '-';
+                let term2_coeff = c * a;
+
+                q = `$$ ${c}x^2 ${op} ${term2_coeff}x $$`;
+                ans = `$$ ${c}x(x ${op} ${a}) $$`;
+
+                steps = `1. 觀察兩項：${c}x² 和 ${term2_coeff}x。<br>
+                         2. 係數公因數為 ${c}，變數公因數為 x，所以共提出 <b>${c}x</b>。<br>
+                         3. 第一項剩餘 x，第二項剩餘 ${a}。<br>
+                         4. 組合為 ${c}x(x ${op} ${a})。`;
+                         
+                distractors.push(`$$ ${c}(x^2 ${op} ${a}x) $$`);
+                distractors.push(`$$ x(${c}x ${op} ${term2_coeff}) $$`);
+                distractors.push(`$$ ${c}x(x ${op==='+'?'-':'+'} ${a}) $$`);
+            }
+            return { q, a: ans, d: distractors, s: steps };
+        },
+
+        // Stage 2: 十字交乘
+        generateStage2: () => {
+            const level = GameState.difficulty;
+            // (ax + b)(cx + d)
+            // 難度1: a=1, c=1 (x^2 + ...)
+            // 難度2: a>1 有機率出現
+            // 難度3: 數字變大
+            
+            let a = 1, c = 1;
+            if (level > 1 && Math.random() > 0.6) {
+                a = MathEngine.rand(1, level + 1);
+                c = MathEngine.rand(1, 2);
+            }
+
+            let range = 5 * MathEngine.getMultiplier();
+            let b = MathEngine.rand(1, range) * MathEngine.randSign();
+            let d = MathEngine.rand(1, range) * MathEngine.randSign();
+
+            // 展開
+            let coeffX2 = a * c;
+            let coeffX = (a * d) + (b * c);
+            let constTerm = b * d;
+
+            let strX2 = coeffX2 === 1 ? "x^2" : `${coeffX2}x^2`;
+            let strX = coeffX === 0 ? "" : (coeffX > 0 ? `+ ${coeffX}x` : `${coeffX}x`);
+            let strC = constTerm > 0 ? `+ ${constTerm}` : `${constTerm}`;
+
+            let q = `$$ ${strX2} ${strX} ${strC} $$`;
+
+            // 答案字串
+            let part1 = (a===1?"x":a+"x") + (b>0 ? "+"+b : b);
+            let part2 = (c===1?"x":c+"x") + (d>0 ? "+"+d : d);
+            let ans = `$$ (${part1})(${part2}) $$`;
+
+            let steps = `使用十字交乘法：<br>
+                         1. 拆解二次項係數 ${coeffX2}： ${a} × ${c}<br>
+                         2. 拆解常數項 ${constTerm}： ${b} × ${d}<br>
+                         3. 交叉相乘檢查一次項：(${a}×${d}) + (${c}×${b}) = ${a*d} + ${b*c} = ${coeffX} (符合！)<br>
+                         4. 橫向組合：(${part1}) 和 (${part2})。`;
+
+            // 干擾項
+            let distractors = [];
+            distractors.push(`$$ (${(a===1?"x":a+"x") + (b>0?"-"+b:"+"+Math.abs(b))})(${(c===1?"x":c+"x") + (d>0?"-"+d:"+"+Math.abs(d))}) $$`); // 變號
+            distractors.push(`$$ (${(a===1?"x":a+"x") + (b>0?"+"+b:b)})(${(c===1?"x":c+"x") + (d>0?"-"+d:"+"+Math.abs(d))}) $$`); 
+            distractors.push(`$$ (${(a===1?"x":a+"x") + (b>0?"-"+b:"+"+Math.abs(b))})(${(c===1?"x":c+"x") + (d>0?"+"+d:d)}) $$`);
+
+            return { q, a: ans, d: distractors, s: steps };
+        },
+
+        // Stage 3: 公式解
+        generateStage3: () => {
+            // ax^2 + bx + c = 0
+            const level = GameState.difficulty;
+            let range = 4 + (level * 2);
+            
+            let a = MathEngine.rand(1, 3);
+            let b = MathEngine.rand(2, range) * MathEngine.randSign();
+            let c = MathEngine.rand(-range, range);
+            
+            // 確保判別式 > 0 (有實根)
+            let D = b*b - 4*a*c;
+            while(D < 0) {
+                c = MathEngine.rand(-range, -1); // 強制C為負比較容易讓D正
+                D = b*b - 4*a*c;
+            }
+
+            let strX2 = a === 1 ? "x^2" : `${a}x^2`;
+            let strX = b > 0 ? `+${b}x` : `${b}x`;
+            let strC = c > 0 ? `+${c}` : `${c}`;
+            let q = `$$ 解: ${strX2} ${strX} ${strC} = 0 $$`;
+
+            let ans = `$$ x = \\frac{${-b} \\pm \\sqrt{${D}}}{${2*a}} $$`;
+
+            let steps = `使用公式解：$$ x = \\frac{-b \\pm \\sqrt{b^2-4ac}}{2a} $$<br>
+                         1. 係數：a=${a}, b=${b}, c=${c}<br>
+                         2. 判別式 D = $(${b})^2 - 4(${a})(${c}) = ${b*b} - (${4*a*c}) = ${D}$<br>
+                         3. 分母 2a = ${2*a}<br>
+                         4. 分子 -b = ${-b}<br>
+                         5. 組合：$$ \\frac{${-b} \\pm \\sqrt{${D}}}{${2*a}} $$`;
+
+            let distractors = [];
+            distractors.push(`$$ x = \\frac{${b} \\pm \\sqrt{${D}}}{${2*a}} $$`); // b符號錯
+            distractors.push(`$$ x = \\frac{${-b} \\pm \\sqrt{${Math.abs(D-5)}}}{${2*a}} $$`); // D算錯
+            distractors.push(`$$ x = \\frac{${-b} \\pm \\sqrt{${D}}}{${a}} $$`); // 分母錯
+
+            return { q, a: ans, d: distractors, s: steps };
+        }
+    };
+
+    // --- 遊戲流程控制 ---
+    function showPanel(id) {
+        document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+    }
+
+    function startGame() {
+        const name = document.getElementById('username').value.trim();
+        if (!name) { alert("勇者，請留下大名！"); return; }
+        GameState.user = name;
+        GameState.score = 0;
+        GameState.stage = 1;
+        
+        startStageIntro();
+    }
+
+    function startStageIntro() {
+        showPanel('screen-stage-intro');
+        let titles = ["第一階段：公因式覺醒", "第二階段：十字交乘斬", "第三階段：奧義公式解"];
+        let descs = [
+            "找出各項隱藏的共同數字與符號！",
+            "將二次多項式拆解成兩個一次式！",
+            "使用萬能公式，解出 x 的真值！"
+        ];
+        document.getElementById('stage-title').innerText = titles[GameState.stage - 1];
+        document.getElementById('stage-desc').innerText = descs[GameState.stage - 1];
+
+        let count = 3;
+        const el = document.getElementById('countdown-intro');
+        el.innerText = count;
+        
+        const int = setInterval(() => {
+            count--;
+            if (count > 0) el.innerText = count;
+            else { clearInterval(int); startLevel(); }
+        }, 1000);
+    }
+
+    function startLevel() {
+        showPanel('screen-game');
+        GameState.timeLeft = 600; // 10分鐘
+        GameState.streak = 0;
+        GameState.difficulty = 1;
+        updateHUD();
+        
+        if (GameState.timerInterval) clearInterval(GameState.timerInterval);
+        GameState.timerInterval = setInterval(() => {
+            if(!GameState.isPaused) {
+                GameState.timeLeft--;
+                updateHUD();
+                if (GameState.timeLeft <= 0) nextStage();
+            }
+        }, 1000);
+
+        nextQuestion();
+    }
+
+    function updateHUD() {
+        let m = Math.floor(GameState.timeLeft / 60);
+        let s = GameState.timeLeft % 60;
+        document.getElementById('timer').innerText = `${m}:${s < 10 ? '0'+s : s}`;
+        document.getElementById('score').innerText = GameState.score;
+        document.getElementById('streak').innerText = GameState.streak;
+        document.getElementById('difficulty-badge').innerText = "LV." + GameState.difficulty;
+        
+        // 動態難度顏色
+        const badge = document.getElementById('difficulty-badge');
+        if(GameState.difficulty === 1) badge.style.backgroundColor = '#2ed573';
+        else if(GameState.difficulty === 2) badge.style.backgroundColor = '#ffa502';
+        else badge.style.backgroundColor = '#ff4757';
+    }
+
+    function nextQuestion() {
+        let data;
+        if (GameState.stage === 1) data = MathEngine.generateStage1();
+        else if (GameState.stage === 2) data = MathEngine.generateStage2();
+        else data = MathEngine.generateStage3();
+
+        GameState.currentData = data; // 儲存起來供解析使用
+        
+        document.getElementById('math-problem').innerText = data.q;
+        
+        let options = [data.a, ...data.d];
+        options.sort(() => Math.random() - 0.5);
+
+        const container = document.getElementById('options-container');
+        container.innerHTML = '';
+        
+        options.forEach((opt) => {
+            const btn = document.createElement('button');
+            btn.className = 'btn btn-option';
+            btn.innerHTML = opt;
+            btn.onclick = () => checkAnswer(opt === data.a);
+            container.appendChild(btn);
+        });
+
+        if (window.MathJax) MathJax.typesetPromise();
+    }
+
+    function checkAnswer(isCorrect) {
+        if (isCorrect) {
+            // 答對
+            GameState.streak++;
+            // 每3連擊提升難度
+            if (GameState.streak % 3 === 0 && GameState.difficulty < 3) {
+                GameState.difficulty++;
+            }
+            
+            // 難度加權分
+            let bonus = GameState.difficulty * 20;
+            GameState.score += (100 + bonus);
+            updateHUD();
+            nextQuestion();
+        } else {
+            // 答錯
+            GameState.streak = 0;
+            GameState.difficulty = 1; // 重置難度
+            updateHUD();
+            showExplanation(); // 顯示解析
+        }
+    }
+
+    function showExplanation() {
+        GameState.isPaused = true; // 暫停計時
+        const modal = document.getElementById('modal-explanation');
+        document.getElementById('modal-correct-ans').innerHTML = GameState.currentData.a;
+        document.getElementById('modal-steps').innerHTML = GameState.currentData.s;
+        modal.style.display = 'flex';
+        if (window.MathJax) MathJax.typesetPromise();
+    }
+
+    function closeExplanation() {
+        document.getElementById('modal-explanation').style.display = 'none';
+        GameState.isPaused = false; // 恢復計時
+        nextQuestion();
+    }
+
+    function nextStage() {
+        clearInterval(GameState.timerInterval);
+        if (GameState.stage < 3) {
+            GameState.stage++;
+            startStageIntro();
+        } else {
+            endGame();
+        }
+    }
+
+    function endGame() {
+        showPanel('screen-result');
+        document.getElementById('final-score').innerText = GameState.score;
+        let msg = "再接再厲！";
+        if (GameState.score > 1500) msg = "數學高手！";
+        if (GameState.score > 3500) msg = "你是因式分解之神！";
+        document.getElementById('result-msg').innerText = msg;
+    }
+
+    // --- 本地存檔 ---
+    function saveAndExit() {
+        const record = {
+            name: GameState.user,
+            score: GameState.score,
+            date: new Date().toLocaleDateString()
+        };
+        
+        let leaderboard = JSON.parse(localStorage.getItem('mathGameLeaderboard_v2') || '[]');
+        leaderboard.push(record);
+        leaderboard.sort((a, b) => b.score - a.score);
+        leaderboard = leaderboard.slice(0, 10);
+        
+        localStorage.setItem('mathGameLeaderboard_v2', JSON.stringify(leaderboard));
+        showLeaderboard();
+    }
+
+    function showLeaderboard() {
+        showPanel('screen-leaderboard');
+        const tbody = document.querySelector('#leaderboard-table tbody');
+        tbody.innerHTML = '';
+        let leaderboard = JSON.parse(localStorage.getItem('mathGameLeaderboard_v2') || '[]');
+        
+        if (leaderboard.length === 0) tbody.innerHTML = '<tr><td colspan="4">暫無紀錄</td></tr>';
+        else {
+            leaderboard.forEach((rec, i) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td>${i+1}</td><td>${rec.name}</td><td>${rec.score}</td><td>${rec.date}</td>`;
+                tbody.appendChild(tr);
+            });
+        }
+    }
+</script>
+</body>
+</html>
